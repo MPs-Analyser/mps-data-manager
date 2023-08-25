@@ -1,17 +1,19 @@
 import { log } from "console";
 import { getMps, getDivision, getMemebersDivisions, getAllDivisions, getMemeberVoting } from "./apicall"
-import { createMpNode, createDivisionNode, setupNeo, createVotedForDivision, cleanUp, setupDataScience, mostSimilarVotingRecord } from "./neoManager";
+import { createMpNode, createDivisionNode, setupNeo, createVotedForDivision, cleanUp, setupDataScience, mostSimilarVotingRecord, votedNoCount, votedAyeCount, totalVotes } from "./neoManager";
 import { Mp } from "../models/mps";
 import { Division, MemberVoting } from "../models/divisions";
 import { VotedFor } from "../models/relationships";
-import { setupMongo, insertSimilarity, insertDivisions, insertMps } from "./mongoManager"
+import { setupMongo, insertSimilarity, insertDivisions, insertMps, insertVotingSummary, insertMp } from "./mongoManager"
+import { P } from "pino";
 
 const logger = require('../logger');
 
 const CREATE_MPS = true;
 const CREATE_DIVISIONS = true;
-const CREATE_RELATIONSHIPS = false;
+const CREATE_RELATIONSHIPS = true;
 const PERFORM_DATA_SCIENCE = false;
+// const CREATE_VOTING_SUMMARY = true;
 
 const endAndPrintTiming = (timingStart: number, timingName: string) => {
     // END timing
@@ -118,33 +120,47 @@ export const gatherStats = async () => {
         let votesForMp: Array<VotedFor>;
         //make relationships between mps and divisions
         let index = 0;
+        // @ts-ignore
+        let votedAye = [];
+        // @ts-ignore
+        let votedNo = [];
         for (const mp of allMps) {
-            logger.debug('Get relationships for mp ', mp.nameDisplayAs);
-            votesForMp = [];
+            logger.debug(`get relationships for mp ${mp.nameDisplayAs}`);
 
+            votesForMp = [];
             index += 1;
             let divisionsVotedCount: number = 25;
             let mpVoteCount: number = 0;
             while (divisionsVotedCount === 25) {
                 //for each mp get all the divisions they have voted on
                 const memeberVotings: Array<MemberVoting> = await getMemeberVoting(skip, 25, mp.id);
-                // logger.debug('got votes RESPONSE ', memeberVotings.map(i => i.PublishedDivision.Title).join(','));
 
                 skip += 25;
 
                 //only create releationships for voted for divisions if we have created the division
-                let filterVoteCount = 0;
+                let filterVoteCount = 0;                
 
                 if (memeberVotings && Array.isArray(memeberVotings)) {
                     memeberVotings.filter(i => {
                         return allDivisions.find(division => division.DivisionId === i.PublishedDivision.DivisionId)
                     }).forEach(vote => {
-
-                        votesForMp.push({
-                            mpId: mp.id,
+                        // @ts-ignore
+                        let votes = {
+                            // @ts-ignore
+                            mpId: vote.id,
                             divisionId: vote.PublishedDivision.DivisionId,
                             votedAye: vote.MemberVotedAye
-                        })
+                        };
+
+                        votesForMp.push(votes);
+
+                        if (vote.MemberVotedAye) {
+                            votedAye.push(vote.PublishedDivision?.DivisionId);
+                        } else {
+                            votedNo.push(vote.PublishedDivision?.DivisionId);
+                        }
+
+
                         filterVoteCount += 1;
                     })
 
@@ -163,6 +179,15 @@ export const gatherStats = async () => {
             skip = 0;
             mpVoteCount = 0;
 
+            //create mongo record of mp complete with ids of all voted aye and voted no votes 
+            const mpToUpdate = allMps.find(i => i.id === mp.id);
+            // @ts-ignore
+            mpToUpdate.votedAye = votedAye;
+            // @ts-ignore
+            mpToUpdate.votedNo = votedNo;
+            insertMp(mpToUpdate);
+
+
         }
 
         logger.debug(`Creating ${allVotedForRelationships.length} Neo releationships ....`);
@@ -173,6 +198,9 @@ export const gatherStats = async () => {
     endAndPrintTiming(timingStart, 'creating relationships');
 
     if (PERFORM_DATA_SCIENCE) {
+
+        logger.info('Doing DATA_SCIENCE similarity')
+
         await setupDataScience();
         const BATCH_SIZE = 10;
 
@@ -229,6 +257,42 @@ export const gatherStats = async () => {
         // END timing
         endAndPrintTiming(timingStart, 'creating similarities');
     }
+
+    //TODO not needed now I store voted aye an no against mps 
+    // if (CREATE_VOTING_SUMMARY) {
+
+    //     logger.info('creating VOTING SUMMARY')
+    //     // Start timing
+    //     timingStart = performance.now();
+
+    //     const BATCH_SIZE = 10;
+
+    //     // @ts-ignore
+    //     let mongoData = [];
+    //     let count = 0;
+    //     for (const mp of allMps) {
+
+    //         logger.debug('Create voting summary for mp ', mp.nameDisplayAs);
+
+    //         const totalVotesResponse: any = await totalVotes(mp.nameDisplayAs);
+    //         const votedAyeResponse = await votedAyeCount(mp.nameDisplayAs);
+    //         const votedNoResponse = await votedNoCount(mp.nameDisplayAs);
+
+    //         const mongoRecord = {
+    //             _id: mp.id,
+    //             name: mp.nameDisplayAs,
+    //             total: totalVotesResponse.records[0]._fields[0].low,
+    //             votedAye: votedAyeResponse.records[0]._fields[0].low,
+    //             votedNo: votedNoResponse.records[0]._fields[0].low
+    //         }
+
+    //         await insertVotingSummary(mongoRecord);
+
+    //     }
+
+    //     // END timing
+    //     endAndPrintTiming(timingStart, 'creating voting summary');
+    // }
 
 
     cleanUp();
