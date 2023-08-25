@@ -1,4 +1,5 @@
-import { log } from "console";
+import { Division, MemberVoting } from "../models/divisions";
+import { Mp } from "../models/mps";
 
 const { MongoClient, ServerApiVersion } = require('mongodb');
 
@@ -42,18 +43,57 @@ export const insertSimilarity = async (data:Array<any>) => {
     const myColl = myDB.collection("similarity1");
     try {
        const insertManyresult = await myColl.insertMany(data);
-    //    let ids = insertManyresult.insertedIds;
        console.log(`${insertManyresult.insertedCount} documents were inserted.`);
-    //    for (let id of Object.values(ids)) {
-    //       console.log(`Inserted a document with id ${id}`);
-    //    }
     } catch(e) {
        console.log(`A MongoBulkWriteException occurred, but there are successfully processed documents.`);
        console.log(e);    
        // @ts-ignore   
        console.log(`Number of documents inserted: ${e.result.result.nInserted}`);
-    }
-
-    
+    }    
 }
 
+
+/**
+ * 
+ * {
+    "type": "division",
+    "id": 1592,
+    "name": "Illegal Migration Bill: motion to disagree with Lords Amendment 31"
+},
+ */ 
+export const insertDivisions = async (division: Array<any>) => {
+    console.log('insert division ', division);
+    await client.connect();
+    const myDB = client.db("mps");
+    const myColl = myDB.collection("divisionNames");
+    try {
+       const insertManyresult = await myColl.insertMany(division);
+       console.log(`${insertManyresult.insertedCount} documents were inserted.`);
+    } catch(e) {
+       console.log(`A MongoBulkWriteException occurred, but there are successfully processed documents.`);
+       console.log(e);    
+       // @ts-ignore   
+       console.log(`Number of documents inserted: ${e.result.result.nInserted}`);
+    }   
+}
+
+/**
+ *  [{"type":"mp","id":172,"name":"Ms Diane Abbott"}]
+ */
+export const insertMps = async (mps : Array<Mp>) => {
+    console.log('insert mp ', mps);
+    
+    await client.connect();
+    const myDB = client.db("mps");
+    const myColl = myDB.collection("mpNames");
+    try {
+       const insertManyresult = await myColl.insertMany(mps);
+       console.log(`${insertManyresult.insertedCount} documents were inserted.`);
+    } catch(e) {
+       console.log(`A MongoBulkWriteException occurred, but there are successfully processed documents.`);
+       console.log(e);    
+       // @ts-ignore   
+       console.log(`Number of documents inserted: ${e.result.result.nInserted}`);
+    }   
+    
+}

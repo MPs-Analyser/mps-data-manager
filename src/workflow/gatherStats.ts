@@ -4,13 +4,14 @@ import { createMpNode, createDivisionNode, setupNeo, createVotedForDivision, cle
 import { Mp } from "../models/mps";
 import { Division, MemberVoting } from "../models/divisions";
 import { VotedFor } from "../models/relationships";
-import { setupMongo, insertSimilarity } from "./mongoManager"
+import { setupMongo, insertSimilarity, insertDivisions, insertMps } from "./mongoManager"
 
 const logger = require('../logger');
 
 const CREATE_MPS = true;
 const CREATE_DIVISIONS = true;
-const CREATE_RELATIONSHIPS = true;
+const CREATE_RELATIONSHIPS = false;
+const PERFORM_DATA_SCIENCE = false;
 
 const endAndPrintTiming = (timingStart: number, timingName: string) => {
     // END timing
@@ -19,10 +20,11 @@ const endAndPrintTiming = (timingStart: number, timingName: string) => {
 }
 
 export const gatherStats = async () => {
-    
+
     logger.info(`Creating ${Number(process.env.MP_LOOPS) * Number(process.env.MP_TAKE_PER_LOOP)} Mps`);
-    
+
     await setupNeo();
+    await setupMongo();
 
     const allMps: Array<Mp> = [];
     const allDivisions: Array<Division> = [];
@@ -41,6 +43,7 @@ export const gatherStats = async () => {
 
         skip = 0;
         for (let i = 0; i < MAX_LOOPS; i++) {
+            //get all the divisions from the API (25 at a time) and store them in memory
             skip += 25;
             const divisions: Array<Division> = await getAllDivisions(skip, 25);
             let fetchCount = divisions.length;
@@ -51,14 +54,21 @@ export const gatherStats = async () => {
                 break;
             }
         }
-        
-        logger.debug(`Created ${allDivisions.length} divisions in memory`);        
+
+        logger.debug(`Created ${allDivisions.length} divisions in memory`);
         neoCreateCount = 0;
         for (let i of allDivisions) {
+            //loop through all mps in memory and store them in database
             await createDivisionNode(i);
             neoCreateCount = neoCreateCount + 1;
         }
+
         logger.debug(`Created ${neoCreateCount} divisions in Neo4j`);
+
+        await insertDivisions(allDivisions);
+
+        logger.debug(`Created ${neoCreateCount} divisions in Mongo`);
+
 
     }
 
@@ -92,6 +102,9 @@ export const gatherStats = async () => {
         }
         logger.debug(`Created ${neoCreateCount} MPs in Neo4j`);
     }
+
+    await insertMps(allMps);
+    logger.debug(`Created ${neoCreateCount} MPs in Mongo`);
 
     // END timing
     endAndPrintTiming(timingStart, 'created MPs');
@@ -159,65 +172,64 @@ export const gatherStats = async () => {
     // END timing
     endAndPrintTiming(timingStart, 'creating relationships');
 
-    await setupDataScience();
+    if (PERFORM_DATA_SCIENCE) {
+        await setupDataScience();
+        const BATCH_SIZE = 10;
 
-    //loop through all mps, use neo to find similarity for each one and store the results in mongo
-    await setupMongo();
+        // Start timing
+        timingStart = performance.now();
 
-    const BATCH_SIZE = 10;
+        // @ts-ignore
+        let mongoData = [];
+        let count = 0;
+        for (const mp of allMps) {
 
-    // Start timing
-    timingStart = performance.now();
+            logger.debug('Get Similarity for mp ', mp.nameDisplayAs);
+            const result = await mostSimilarVotingRecord(mp.nameDisplayAs);
 
-    // @ts-ignore
-    let mongoData = [];
-    let count = 0;
-    for (const mp of allMps) {
+            if (result) {
+                const mongoRecord = {
+                    _id: mp.id,
+                    name: mp.nameDisplayAs,
+                    similarity: []
+                }
 
-        logger.debug('Get Similarity for mp ', mp.nameDisplayAs);
-        const result = await mostSimilarVotingRecord(mp.nameDisplayAs);
-
-        if (result) {
-            const mongoRecord = {
-                _id: mp.id,
-                name: mp.nameDisplayAs,
-                similarity: []
-            }
-
-            // @ts-ignore
-            result.records.forEach(async record => {
                 // @ts-ignore
-                mongoRecord.similarity.push({
-                    name: record._fields[1],
-                    score: record._fields[2]
+                result.records.forEach(async record => {
+                    // @ts-ignore
+                    mongoRecord.similarity.push({
+                        name: record._fields[1],
+                        score: record._fields[2]
+                    })
+
                 })
 
-            })
+                logger.debug('created ', mongoRecord);
+                mongoData.push(mongoRecord);
 
-            logger.debug('created ', mongoRecord);
-            mongoData.push(mongoRecord);
+                if (count === BATCH_SIZE) {
+                    count = 0;
+                    // @ts-ignore   
+                    await insertSimilarity(mongoData);
+                    mongoData = [];
+                }
 
-            if (count === BATCH_SIZE) {
-                count = 0;
-                // @ts-ignore   
-                await insertSimilarity(mongoData);
-                mongoData = [];
             }
 
+            count = count + 1;
         }
 
-        count = count + 1;
+
+        //if any left before flling up batch size then send them to mongo
+        if (mongoData.length) {
+            await insertSimilarity(mongoData);
+            mongoData = [];
+        }
+
+        // END timing
+        endAndPrintTiming(timingStart, 'creating similarities');
     }
 
-
-    //if any left before flling up batch size then send them to mongo
-    if (mongoData.length) {
-        await insertSimilarity(mongoData);
-        mongoData = [];
-    }
-
-    // END timing
-    endAndPrintTiming(timingStart, 'creating similarities');
 
     cleanUp();
 
