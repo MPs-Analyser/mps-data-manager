@@ -262,7 +262,7 @@ export const createMpNode = async (mp: Mp) => {
 
     } catch (error: any) {
         if (error.code !== "Neo.ClientError.Schema.ConstraintValidationFailed") {
-            logger.debug('Error adding Club: ', error);
+            logger.error(`Error adding to neo ${error}`);
         }
     }
 
@@ -289,7 +289,7 @@ export const createDivisionNode = async (division: Division) => {
 
     } catch (error: any) {
         if (error.code !== "Neo.ClientError.Schema.ConstraintValidationFailed") {
-            logger.debug('Error adding Club: ', error);
+            logger.error(`Error adding to neo ${error}`);
         }
     }
 
@@ -306,7 +306,7 @@ export const createVotedForDivision = async (votedFor: VotedFor) => {
 
     } catch (error: any) {
         if (error.code !== "Neo.ClientError.Schema.ConstraintValidationFailed") {
-            logger.debug('Error adding Club: ', error);
+            logger.error(`Error adding to neo ${error}`);
         }
     }
 

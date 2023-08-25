@@ -64,7 +64,7 @@ export const insertSimilarity = async (data:Array<any>) => {
 export const insertDivisions = async (division: Array<any>) => {    
     await client.connect();
     const myDB = client.db("mps");
-    const myColl = myDB.collection("divisionNames");
+    const myColl = myDB.collection("divisions");
     try {
        const insertManyresult = await myColl.insertMany(division);
        console.log(`${insertManyresult.insertedCount} documents were inserted.`);
@@ -102,8 +102,7 @@ export const insertMp = async (mp :any) => {
        const result = await myColl.insertOne(mp);       
     } catch(e) {       
        console.log(e);    
-    }   
-    
+    }      
 }
 
 export const insertVotingSummary = async (value: any) => {

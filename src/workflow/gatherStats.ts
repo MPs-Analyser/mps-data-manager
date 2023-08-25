@@ -5,7 +5,6 @@ import { Mp } from "../models/mps";
 import { Division, MemberVoting } from "../models/divisions";
 import { VotedFor } from "../models/relationships";
 import { setupMongo, insertSimilarity, insertDivisions, insertMps, insertVotingSummary, insertMp } from "./mongoManager"
-import { P } from "pino";
 
 const logger = require('../logger');
 
@@ -13,6 +12,7 @@ const CREATE_MPS = true;
 const CREATE_DIVISIONS = true;
 const CREATE_RELATIONSHIPS = true;
 const PERFORM_DATA_SCIENCE = false;
+const USE_NEO = false;
 // const CREATE_VOTING_SUMMARY = true;
 
 const endAndPrintTiming = (timingStart: number, timingName: string) => {
@@ -25,7 +25,10 @@ export const gatherStats = async () => {
 
     logger.info(`Creating ${Number(process.env.MP_LOOPS) * Number(process.env.MP_TAKE_PER_LOOP)} Mps`);
 
-    await setupNeo();
+    if (USE_NEO) {
+        await setupNeo();
+    }
+    
     await setupMongo();
 
     const allMps: Array<Mp> = [];
@@ -58,19 +61,20 @@ export const gatherStats = async () => {
         }
 
         logger.debug(`Created ${allDivisions.length} divisions in memory`);
-        neoCreateCount = 0;
-        for (let i of allDivisions) {
-            //loop through all mps in memory and store them in database
-            await createDivisionNode(i);
-            neoCreateCount = neoCreateCount + 1;
-        }
 
-        logger.debug(`Created ${neoCreateCount} divisions in Neo4j`);
-
+        if (USE_NEO) {
+            neoCreateCount = 0;
+            for (let i of allDivisions) {
+                //loop through all mps in memory and store them in database
+                await createDivisionNode(i);
+                neoCreateCount = neoCreateCount + 1;
+            }
+    
+            logger.debug(`Created ${neoCreateCount} divisions in Neo4j`);
+        } 
+        
         await insertDivisions(allDivisions);
-
-        logger.debug(`Created ${neoCreateCount} divisions in Mongo`);
-
+        logger.debug(`Created divisions in Mongo`);
 
     }
 
@@ -97,16 +101,14 @@ export const gatherStats = async () => {
         }
         logger.debug(`Created ${allMps.length} MPs in memory`);
 
-
-        for (let i of allMps) {
-            await createMpNode(i);
-            neoCreateCount = neoCreateCount + 1;
-        }
-        logger.debug(`Created ${neoCreateCount} MPs in Neo4j`);
+        if (USE_NEO) {
+            for (let i of allMps) {
+                await createMpNode(i);
+                neoCreateCount = neoCreateCount + 1;
+            }
+            logger.debug(`Created ${neoCreateCount} MPs in Neo4j`);
+        }        
     }
-
-    await insertMps(allMps);
-    logger.debug(`Created ${neoCreateCount} MPs in Mongo`);
 
     // END timing
     endAndPrintTiming(timingStart, 'created MPs');
@@ -171,10 +173,13 @@ export const gatherStats = async () => {
 
             }
 
-            logger.debug(`createing ${votesForMp.length} Neo RELEATIONSHIPS for MP #${index} ${mp.nameDisplayAs}`);
-            for (let votedFor of votesForMp) {
-                await createVotedForDivision(votedFor);
+            if (USE_NEO) {
+                logger.debug(`createing ${votesForMp.length} Neo RELEATIONSHIPS for MP #${index} ${mp.nameDisplayAs}`);
+                for (let votedFor of votesForMp) {
+                    await createVotedForDivision(votedFor);
+                }
             }
+            
             logger.debug(`created ${votesForMp.length} RELEATIONSHIPS for MP #${index} ${mp.nameDisplayAs}`);
             skip = 0;
             mpVoteCount = 0;
@@ -187,17 +192,14 @@ export const gatherStats = async () => {
             mpToUpdate.votedNo = votedNo;
             insertMp(mpToUpdate);
 
-
         }
-
-        logger.debug(`Creating ${allVotedForRelationships.length} Neo releationships ....`);
 
     }
 
     // END timing
     endAndPrintTiming(timingStart, 'creating relationships');
 
-    if (PERFORM_DATA_SCIENCE) {
+    if (PERFORM_DATA_SCIENCE && USE_NEO) {
 
         logger.info('Doing DATA_SCIENCE similarity')
 
@@ -294,8 +296,11 @@ export const gatherStats = async () => {
     //     endAndPrintTiming(timingStart, 'creating voting summary');
     // }
 
+    if (USE_NEO) {
+        cleanUp();
+    }
 
-    cleanUp();
+    
 
     logger.info('END');
 

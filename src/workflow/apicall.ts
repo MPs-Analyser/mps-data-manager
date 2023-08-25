@@ -4,6 +4,8 @@ import fetch from 'node-fetch';
 import { responseWrapper, responseValue, Mp } from '../models/mps';
 import { DivisionResposne, Division, MemberVoting } from '../models/divisions';
 
+const logger = require('../logger');
+
 export const getMps = async (skip: number, take: number): Promise<Array<Mp>> => {
 
   const HOUSE_OF_COMMONS = 1;
@@ -12,7 +14,8 @@ export const getMps = async (skip: number, take: number): Promise<Array<Mp>> => 
   try {
 
     const url: string = `https://members-api.parliament.uk/api/Members/Search?skip=${skip}&take=${take}&IsEligible=${true}&IsCurrentMember=${true}&House=${HOUSE_OF_COMMONS}`;
-    // console.log(url);
+    
+    logger.trace(url);
 
     const res = await fetch(url);
 
@@ -35,7 +38,9 @@ export const getMps = async (skip: number, take: number): Promise<Array<Mp>> => 
 export const getMemebersDivisions = async (skip: number, take: number, memberId: number): Promise<Array<Division>> => {
 
   const url: string = `https://commonsvotes-api.parliament.uk/data/divisions.json/search?queryParameters.skip=${skip}&queryParameters.take=${take}&queryParameters.memberId=${memberId}`;
-  // console.log(url);  
+  
+  logger.trace(url);
+
   const res = await fetch(url);
 
   const divisionResposne: Array<DivisionResposne> = await res.json();
@@ -68,6 +73,9 @@ export const getMemebersDivisions = async (skip: number, take: number, memberId:
 export const getMemeberVoting = async (skip: number, take: number, memberId: number): Promise<Array<MemberVoting>> => {
 
   const url: string = `https://commonsvotes-api.parliament.uk/data/divisions.json/membervoting?queryParameters.memberId=${memberId}&queryParameters.skip=${skip}&queryParameters.take=${take}`;
+
+  logger.trace(url);
+  
   // console.log(url);  
   const res = await fetch(url);
 
@@ -79,16 +87,16 @@ export const getMemeberVoting = async (skip: number, take: number, memberId: num
 
 export const getAllDivisions = async (skip: number, take: number): Promise<Array<Division>> => {
 
-  const res = await fetch(`https://commonsvotes-api.parliament.uk/data/divisions.json/search?queryParameters.skip=${skip}&queryParameters.take=${take}`);
+  const url: string = `https://commonsvotes-api.parliament.uk/data/divisions.json/search?queryParameters.skip=${skip}&queryParameters.take=${take}`;
+  logger.trace(url);
+
+  const res = await fetch(url);
   
   const divisions: Array<Division> = []
 
   if (res.status === 200) {
 
     const divisionResposne: Array<DivisionResposne> = await res.json();
-
-    // console.log('divisionResposne ', divisionResposne);
-
 
     divisionResposne.forEach(i => {
       const division: Division = {
@@ -118,7 +126,10 @@ export const getAllDivisions = async (skip: number, take: number): Promise<Array
 
 export const getDivision = async (divisionId: number): Promise<Division> => {
 
-  const res = await fetch(`https://commonsvotes-api.parliament.uk/data/division/${divisionId}.json`);
+  const url: string = `https://commonsvotes-api.parliament.uk/data/division/${divisionId}.json`;
+  logger.trace(url);
+
+  const res = await fetch(url);
 
   const divisionResposne: DivisionResposne = await res.json();
 
