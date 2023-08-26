@@ -5,11 +5,13 @@ import { Mp } from "../models/mps";
 import { Division, MemberVoting } from "../models/divisions";
 import { VotedFor } from "../models/relationships";
 import { setupMongo, insertSimilarity, insertDivisions, insertMps, insertVotingSummary, insertMp } from "./mongoManager"
+import { P } from "pino";
 
 const logger = require('../logger');
 
 const CREATE_MPS = true;
 const CREATE_DIVISIONS = true;
+const CREATE_MONGO_DIVISIONS = true;
 const CREATE_RELATIONSHIPS = true;
 const PERFORM_DATA_SCIENCE = false;
 const USE_NEO = false;
@@ -28,7 +30,7 @@ export const gatherStats = async () => {
     if (USE_NEO) {
         await setupNeo();
     }
-    
+
     await setupMongo();
 
     const allMps: Array<Mp> = [];
@@ -69,12 +71,18 @@ export const gatherStats = async () => {
                 await createDivisionNode(i);
                 neoCreateCount = neoCreateCount + 1;
             }
-    
+
             logger.debug(`Created ${neoCreateCount} divisions in Neo4j`);
-        } 
-        
-        await insertDivisions(allDivisions);
-        logger.debug(`Created divisions in Mongo`);
+        }
+
+        if (CREATE_MONGO_DIVISIONS) {
+            const mongoData = allDivisions.map(({EVELType, EVELCountry, ...rest}) => {
+                return rest;
+              });
+            await insertDivisions(mongoData);
+            logger.debug(`Created divisions in Mongo`);
+        }
+
 
     }
 
@@ -107,7 +115,7 @@ export const gatherStats = async () => {
                 neoCreateCount = neoCreateCount + 1;
             }
             logger.debug(`Created ${neoCreateCount} MPs in Neo4j`);
-        }        
+        }
     }
 
     // END timing
@@ -140,7 +148,7 @@ export const gatherStats = async () => {
                 skip += 25;
 
                 //only create releationships for voted for divisions if we have created the division
-                let filterVoteCount = 0;                
+                let filterVoteCount = 0;
 
                 if (memeberVotings && Array.isArray(memeberVotings)) {
                     memeberVotings.filter(i => {
@@ -179,18 +187,28 @@ export const gatherStats = async () => {
                     await createVotedForDivision(votedFor);
                 }
             }
-            
+
             logger.debug(`created ${votesForMp.length} RELEATIONSHIPS for MP #${index} ${mp.nameDisplayAs}`);
             skip = 0;
             mpVoteCount = 0;
 
             //create mongo record of mp complete with ids of all voted aye and voted no votes 
             const mpToUpdate = allMps.find(i => i.id === mp.id);
-            // @ts-ignore
-            mpToUpdate.votedAye = votedAye;
-            // @ts-ignore
-            mpToUpdate.votedNo = votedNo;
-            insertMp(mpToUpdate);
+
+            if (mpToUpdate) {
+                // @ts-ignore
+                delete mpToUpdate.nameListAs;
+                // @ts-ignore
+                delete mpToUpdate.gender;
+                // @ts-ignore
+                delete mpToUpdate.nameFullTitle;
+
+                // @ts-ignore
+                mpToUpdate.votedAye = votedAye;
+                // @ts-ignore
+                mpToUpdate.votedNo = votedNo;
+                insertMp(mpToUpdate);
+            }
 
         }
 
@@ -300,7 +318,7 @@ export const gatherStats = async () => {
         cleanUp();
     }
 
-    
+
 
     logger.info('END');
 
