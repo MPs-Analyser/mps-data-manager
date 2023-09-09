@@ -163,7 +163,67 @@ export const mostSimilarVotingRecord = async (nameDisplayAs: string) => {
     })
     YIELD node1, node2, similarity 
     WITH gds.util.asNode(node1) AS mp1, gds.util.asNode(node2) AS mp2, similarity 
-    WHERE mp1.nameDisplayAs = "${nameDisplayAs}" OR node2 = "${nameDisplayAs}"
+    WHERE mp1.nameDisplayAs = "${nameDisplayAs}" OR mp2.nameDisplayAs = "${nameDisplayAs}"
+    RETURN mp1.nameDisplayAs, mp2.nameDisplayAs, similarity
+    ORDER BY similarity DESCENDING, mp1, mp2`;
+
+
+    CONNECTION_STRING = `bolt://${process.env.DOCKER_HOST}:7687`;
+    // CONNECTION_STRING = `neo4j+s://bb90f2dc.databases.neo4j.io`;
+    driver = neo4j.driver(CONNECTION_STRING, neo4j.auth.basic(process.env.NEO4J_USER || '', process.env.NEO4J_PASSWORD || ''));
+    const session = driver.session();
+
+    try {
+        const result = await runCypher(cypher, session);
+        return result;
+    } finally {
+        session.close();
+    }
+
+}
+
+export const mostSimilarVotingRecordwithinParty = async (nameDisplayAs: string, partyName: string) => {
+
+    logger.debug('finding mostSimilarVotingRecord...');
+
+    //find mps with most similar voting records
+    const cypher = `CALL gds.nodeSimilarity.stream('g1', {
+        relationshipWeightProperty: 'votedAyeNumeric'
+    })
+    YIELD node1, node2, similarity 
+    WITH gds.util.asNode(node1) AS mp1, gds.util.asNode(node2) AS mp2, similarity 
+    WHERE (mp1.nameDisplayAs = "${nameDisplayAs}" OR mp2.nameDisplayAs = "${nameDisplayAs})"
+    AND mp2.partyName = "${partyName}"
+    RETURN mp1.nameDisplayAs, mp2.nameDisplayAs, similarity
+    ORDER BY similarity DESCENDING, mp1, mp2`;
+
+
+    CONNECTION_STRING = `bolt://${process.env.DOCKER_HOST}:7687`;
+    // CONNECTION_STRING = `neo4j+s://bb90f2dc.databases.neo4j.io`;
+    driver = neo4j.driver(CONNECTION_STRING, neo4j.auth.basic(process.env.NEO4J_USER || '', process.env.NEO4J_PASSWORD || ''));
+    const session = driver.session();
+
+    try {
+        const result = await runCypher(cypher, session);
+        return result;
+    } finally {
+        session.close();
+    }
+
+}
+
+export const mostSimilarVotingRecordOutsideOfParty = async (nameDisplayAs: string, partyName: string) => {
+
+    logger.debug('finding mostSimilarVotingRecord...');
+
+    //find mps with most similar voting records
+    const cypher = `CALL gds.nodeSimilarity.stream('g1', {
+        relationshipWeightProperty: 'votedAyeNumeric'
+    })
+    YIELD node1, node2, similarity 
+    WITH gds.util.asNode(node1) AS mp1, gds.util.asNode(node2) AS mp2, similarity 
+    WHERE (mp1.nameDisplayAs = "${nameDisplayAs}" OR mp2.nameDisplayAs = "${nameDisplayAs})"
+    AND mp2.partyName <> "${partyName}"
     RETURN mp1.nameDisplayAs, mp2.nameDisplayAs, similarity
     ORDER BY similarity DESCENDING, mp1, mp2`;
 

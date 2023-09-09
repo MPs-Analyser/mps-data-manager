@@ -3,6 +3,7 @@
 Requires neo4 instance 
 
 docker run --publish=7474:7474 --publish=7687:7687 --volume=$HOME/neo4j/data:/data --env NEO4J_PLUGINS='["graph-data-science"]' neo4j
+
 //ssh into container
 winpty docker exec -it 0394c5 bash
 //stop and dump (need to find a way to not stop the container when the database stops)
