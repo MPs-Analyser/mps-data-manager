@@ -3,7 +3,7 @@ const fs = require("fs");
 var pretty = require('pino-pretty')
 
 const streams = [
-    { level: 'debug', stream: process.stdout },
+    { level: 'trace', stream: process.stdout },
     {
         level: "debug", // log INFO and above
         stream: fs.createWriteStream("./app.log", { flags: "a" }),
@@ -20,4 +20,3 @@ module.exports = pino(
     },
     pino.multistream(streams)
 );
-

@@ -103,7 +103,7 @@ export const votedNoCount = async (nameDisplayAs: string) => {
 }
 
 export const voted = async (nameDisplayAs: string) => {
-    
+
     const cypher = `MATCH (s:Mp)-[r:VOTED_FOR]-(d) WHERE (s.nameDisplayAs = "${nameDisplayAs}") RETURN d.DivisionId, d.Title, d.Date, r.votedAye`;
 
     CONNECTION_STRING = `bolt://${process.env.DOCKER_HOST}:7687`;
@@ -120,7 +120,7 @@ export const voted = async (nameDisplayAs: string) => {
 }
 
 export const votedAye = async (nameDisplayAs: string) => {
-    
+
     const cypher = `MATCH (s:Mp)-[r:VOTED_FOR]-(d) WHERE (s.nameDisplayAs = "${nameDisplayAs}" AND r.votedAye) RETURN d.DivisionId, d.Title, d.Date`;
 
     CONNECTION_STRING = `bolt://${process.env.DOCKER_HOST}:7687`;
@@ -137,7 +137,7 @@ export const votedAye = async (nameDisplayAs: string) => {
 }
 
 export const votedNo = async (nameDisplayAs: string) => {
-    
+
     const cypher = `MATCH (s:Mp)-[r:VOTED_FOR]-(d) WHERE (s.nameDisplayAs = "${nameDisplayAs}" AND NOT r.votedAye) RETURN d.DivisionId, d.Title, d.Date`;
 
     CONNECTION_STRING = `bolt://${process.env.DOCKER_HOST}:7687`;
@@ -158,15 +158,15 @@ export const mostSimilarVotingRecord = async (nameDisplayAs: string) => {
     logger.debug('finding mostSimilarVotingRecord...');
 
     //find mps with most similar voting records
-    const cypher = `CALL gds.nodeSimilarity.stream('g1', {
-        relationshipWeightProperty: 'votedAyeNumeric'
-    })
-    YIELD node1, node2, similarity 
-    WITH gds.util.asNode(node1) AS mp1, gds.util.asNode(node2) AS mp2, similarity 
-    WHERE mp1.nameDisplayAs = "${nameDisplayAs}" OR mp2.nameDisplayAs = "${nameDisplayAs}"
-    RETURN mp1.nameDisplayAs, mp2.nameDisplayAs, similarity
-    ORDER BY similarity DESCENDING, mp1, mp2`;
-
+    const cypher = `MATCH(targetNode: Mp { nameDisplayAs: "${nameDisplayAs}" })
+    CALL gds.nodeSimilarity.stream('g1', {
+            relationshipWeightProperty: 'votedAyeNumeric'
+        })
+    YIELD node1, node2, similarity
+    WITH gds.util.asNode(node1) AS mp1, gds.util.asNode(node2) AS mp2, similarity    
+    RETURN mp1.nameDisplayAs, mp2.nameDisplayAs, mp2.partyName, similarity
+    ORDER BY similarity DESCENDING, mp1.nameDisplayAs, mp2.nameDisplayAs
+    LIMIT 20`;
 
     CONNECTION_STRING = `bolt://${process.env.DOCKER_HOST}:7687`;
     // CONNECTION_STRING = `neo4j+s://bb90f2dc.databases.neo4j.io`;
@@ -253,8 +253,7 @@ export const setupNeo = async () => {
     logger.debug(`NEO URL ${CONNECTION_STRING + process.env.NEO4J_USER + process.env.NEO4J_PASSWORD}`);
 
     try {
-        let result;
-        result = await runCypher(`MATCH (n) DETACH DELETE n`, session);
+        let result;        
         result = await runCypher(`CREATE CONSTRAINT FOR (mp:Mp) REQUIRE mp.id IS UNIQUE`, session);
         result = await runCypher(`CREATE CONSTRAINT FOR (mp:Mp) REQUIRE mp.id IS UNIQUE`, session);
         result = await runCypher(`CREATE CONSTRAINT voted_for_unique ON (mp:Mp)-[:VOTED_FOR]->(division:Division) REQUIRE (mp.id <> division.id)`, session);

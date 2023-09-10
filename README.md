@@ -19,15 +19,30 @@ CALL gds.graph.drop('g1',false) YIELD graphName
 
 CALL gds.graph.project('g1', ['Mp', 'Division'], ['VOTED_FOR'],  { relationshipProperties: ['votedAyeNumeric'] })
 
-//find mps with most similar voting records
+//find mps with most similar voting records 
 CALL gds.nodeSimilarity.stream('g1',{
   relationshipWeightProperty:'votedAyeNumeric'
 })
 YIELD node1, node2, similarity 
 WITH gds.util.asNode(node1) AS mp1, gds.util.asNode(node2) AS mp2, similarity 
-WHERE mp1.nameDisplayAs = "Ms Diane Abbott" OR node2 = "Ms Diane Abbott"
-RETURN mp1.nameDisplayAs, mp2.nameDisplayAs, similarity
+WHERE (mp1.nameDisplayAs = "Ms Diane Abbott" OR mp2.nameDisplayAs = "Ms Diane Abbott")
+AND mp2.partyName <> 'Labour'
+RETURN mp1.nameDisplayAs, mp2.nameDisplayAs, mp2.partyName, similarity
 ORDER BY similarity DESCENDING, mp1, mp2
+
+
+MATCH (targetNode:Mp {nameDisplayAs: "Ms Diane Abbott"})
+CALL gds.nodeSimilarity.stream('g1', {
+  relationshipWeightProperty: 'votedAyeNumeric'
+})
+YIELD node1, node2, similarity
+WITH gds.util.asNode(node1) AS mp1, gds.util.asNode(node2) AS mp2, similarity
+WHERE mp2.partyName <> 'Labour'
+RETURN mp1.nameDisplayAs, mp2.nameDisplayAs, mp2.partyName, similarity
+ORDER BY similarity DESCENDING, mp1.nameDisplayAs, mp2.nameDisplayAs
+LIMIT 20
+
+
 
 //compare 2 mps on voting for a specific division
 MATCH (s:Mp)-[r]-(d) WHERE (s.nameDisplayAs = "Ms Diane Abbott" OR s.nameDisplayAs = "Nigel Adams") AND d.DivisionId = 1446 RETURN s,d

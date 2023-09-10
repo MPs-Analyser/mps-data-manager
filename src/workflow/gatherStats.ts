@@ -46,6 +46,7 @@ export const gatherStats = async () => {
     let neoCreateCount = 0;
 
     // Start timing
+    const totalTimeStart = performance.now();
     let timingStart = performance.now();
 
     //create all the divisions 
@@ -254,8 +255,7 @@ export const gatherStats = async () => {
                     })
 
                 })
-
-                logger.debug('created ', mongoRecord);
+                
                 mongoData.push(mongoRecord);
 
                 if (USE_MONGO && count === BATCH_SIZE) {
@@ -285,6 +285,7 @@ export const gatherStats = async () => {
         cleanUp();
     }
 
+    endAndPrintTiming(totalTimeStart, 'Workflow complete');
 
 
     logger.info('END');
