@@ -8,14 +8,14 @@ import { setupMongo, insertSimilarity, insertDivisions, insertMps, insertVotingS
 
 const logger = require('../logger');
 
-const CREATE_MPS = false;
-const CREATE_DIVISIONS = false;
+const CREATE_MPS = true;
+const CREATE_DIVISIONS = true;
 const CREATE_MONGO_DIVISIONS = true;
 const CREATE_RELATIONSHIPS = true;
 const PERFORM_DATA_SCIENCE = true;
 const USE_NEO = true;
 const USE_MONGO = false;
-const MP_START_NUMBER = 4;
+const MP_START_NUMBER = 0;
 
 const endAndPrintTiming = (timingStart: number, timingName: string) => {
     // END timing
