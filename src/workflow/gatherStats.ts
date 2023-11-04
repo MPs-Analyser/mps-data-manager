@@ -4,18 +4,17 @@ import { createMpNode, createDivisionNode, setupNeo, createVotedForDivision, cle
 import { Mp } from "../models/mps";
 import { Division, MemberVoting } from "../models/divisions";
 import { VotedFor } from "../models/relationships";
-import { setupMongo, insertSimilarity, insertDivisions, insertMps, insertVotingSummary, insertMp } from "./mongoManager"
 
 const logger = require('../logger');
 
+//these 3 used for re-runs
 const CREATE_MPS = true;
 const CREATE_DIVISIONS = true;
-const CREATE_MONGO_DIVISIONS = true;
+const MP_START_NUMBER = 0;
+
 const CREATE_RELATIONSHIPS = true;
 const PERFORM_DATA_SCIENCE = true;
 const USE_NEO = true;
-const USE_MONGO = false;
-const MP_START_NUMBER = 0;
 
 const endAndPrintTiming = (timingStart: number, timingName: string) => {
     // END timing
@@ -30,12 +29,7 @@ export const gatherStats = async () => {
     if (USE_NEO) {
         await setupNeo();
     }
-
-    if (USE_MONGO) {
-        await setupMongo();
-    }
-
-
+    
     const allMps: Array<Mp> = [];
     const allDivisions: Array<Division> = [];
     const allVotedForRelationships: Array<VotedFor> = [];
@@ -75,16 +69,7 @@ export const gatherStats = async () => {
         }
 
         logger.debug(`Created ${neoCreateCount} divisions in Neo4j`);
-    }
-
-    if (CREATE_MONGO_DIVISIONS && USE_MONGO) {
-        const mongoData = allDivisions.map(({ EVELType, EVELCountry, ...rest }) => {
-            return rest;
-        });
-        await insertDivisions(mongoData);
-        logger.debug(`Created divisions in Mongo`);
-    }
-
+    }    
 
     // END timing
     endAndPrintTiming(timingStart, 'created divisions');
@@ -194,25 +179,7 @@ export const gatherStats = async () => {
             logger.debug(`created ${votesForMp.length} RELEATIONSHIPS for MP #${mpNumber} ${mp.nameDisplayAs}`);
             skip = 0;
             mpVoteCount = 0;
-
-            //create mongo record of mp complete with ids of all voted aye and voted no votes 
-            const mpToUpdate = allMps.find(i => i.id === mp.id);
-
-            if (mpToUpdate && USE_MONGO) {
-                // @ts-ignore
-                delete mpToUpdate.nameListAs;
-                // @ts-ignore
-                delete mpToUpdate.gender;
-                // @ts-ignore
-                delete mpToUpdate.nameFullTitle;
-
-                // @ts-ignore
-                mpToUpdate.votedAye = votedAye;
-                // @ts-ignore
-                mpToUpdate.votedNo = votedNo;
-                insertMp(mpToUpdate);
-            }
-
+                        
         }
 
     }
@@ -224,14 +191,11 @@ export const gatherStats = async () => {
 
         logger.info('Doing DATA_SCIENCE similarity')
 
-        await setupDataScience();
-        const BATCH_SIZE = 10;
+        await setupDataScience();        
 
         // Start timing
         timingStart = performance.now();
 
-        // @ts-ignore
-        let mongoData = [];
         let count = 0;
         for (const mp of allMps) {
 
@@ -252,28 +216,10 @@ export const gatherStats = async () => {
                         name: record._fields[1],
                         score: record._fields[2]
                     })
-
                 })
-
-                mongoData.push(mongoRecord);
-
-                if (USE_MONGO && count === BATCH_SIZE) {
-                    count = 0;
-                    // @ts-ignore   
-                    await insertSimilarity(mongoData);
-                    mongoData = [];
-                }
-
             }
 
             count = count + 1;
-        }
-
-
-        //if any left before flling up batch size then send them to mongo
-        if (USE_MONGO && mongoData.length) {
-            await insertSimilarity(mongoData);
-            mongoData = [];
         }
 
         // END timing
@@ -286,8 +232,6 @@ export const gatherStats = async () => {
 
     endAndPrintTiming(totalTimeStart, 'Workflow complete');
 
-
     logger.info('END');
-
 
 }
