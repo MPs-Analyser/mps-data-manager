@@ -20,24 +20,14 @@ CALL gds.graph.drop('g1',false) YIELD graphName
 CALL gds.graph.project('g1', ['Mp', 'Division'], ['VOTED_FOR'],  { relationshipProperties: ['votedAyeNumeric'] })
 
 //find mps with most similar voting records 
-CALL gds.nodeSimilarity.stream('g1',{
-  relationshipWeightProperty:'votedAyeNumeric'
-})
-YIELD node1, node2, similarity 
-WITH gds.util.asNode(node1) AS mp1, gds.util.asNode(node2) AS mp2, similarity 
-WHERE (mp1.nameDisplayAs = "Ms Diane Abbott" OR mp2.nameDisplayAs = "Ms Diane Abbott")
-AND mp2.partyName <> 'Labour'
-RETURN mp1.nameDisplayAs, mp2.nameDisplayAs, mp2.partyName, similarity
-ORDER BY similarity DESCENDING, mp1, mp2
-
-
-MATCH (targetNode:Mp {nameDisplayAs: "Ms Diane Abbott"})
 CALL gds.nodeSimilarity.stream('g1', {
-  relationshipWeightProperty: 'votedAyeNumeric'
+  relationshipWeightProperty: 'votedAyeNumeric',
+  topK: 100
 })
 YIELD node1, node2, similarity
 WITH gds.util.asNode(node1) AS mp1, gds.util.asNode(node2) AS mp2, similarity
-WHERE mp2.partyName <> 'Labour'
+WHERE (mp1.nameDisplayAs = "Ms Diane Abbott" OR mp2.nameDisplayAs = "Ms Diane Abbott")
+AND (mp1.partyName <> "Conservative" OR mp2.partyName <> "Conservative")
 RETURN mp1.nameDisplayAs, mp2.nameDisplayAs, mp2.partyName, similarity
 ORDER BY similarity DESCENDING, mp1.nameDisplayAs, mp2.nameDisplayAs
 LIMIT 20

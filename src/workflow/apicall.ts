@@ -2,7 +2,9 @@
 import fetch from 'node-fetch';
 
 import { responseWrapper, responseValue, Mp } from '../models/mps';
-import { DivisionResposne, Division, MemberVoting } from '../models/divisions';
+import { DivisionResposne, Division, MemberVoting, CategoryTypes } from '../models/divisions';
+
+import { getCategory } from "../utils/categoryManager";
 
 const logger = require('../logger');
 
@@ -58,7 +60,8 @@ export const getMemebersDivisions = async (skip: number, take: number, memberId:
       EVELCountry: i.EVELCountry ?? '',
       Title: i.Title ?? '',
       AyeCount: i.AyeCount ?? 0,
-      NoCount: i.NoCount ?? 0
+      NoCount: i.NoCount ?? 0,
+      category: getCategory(i.Title)
     };
 
     divisions.push(division)
@@ -115,8 +118,11 @@ export const getAllDivisions = async (skip: number, take: number): Promise<Array
         EVELCountry: i.EVELCountry ?? '',
         Title: i.Title ?? '',
         AyeCount: i.AyeCount ?? 0,
-        NoCount: i.NoCount ?? 0
+        NoCount: i.NoCount ?? 0,
+        category: getCategory(i.Title)
       };
+
+      logger.info("check " + JSON.stringify(division))
 
       divisions.push(division)
 
@@ -149,7 +155,8 @@ export const getDivision = async (divisionId: number): Promise<Division> => {
     EVELCountry: divisionResposne.EVELCountry ?? '',
     Title: divisionResposne.Title ?? '',
     AyeCount: divisionResposne.AyeCount ?? 0,
-    NoCount: divisionResposne.NoCount ?? 0
+    NoCount: divisionResposne.NoCount ?? 0,
+    category: getCategory(divisionResposne.Title)
   };
 
 

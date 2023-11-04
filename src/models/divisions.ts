@@ -1,3 +1,7 @@
+export type CategoryTypes = {  
+  [key:string]: string
+}
+
 export interface Division {
   [key: string]: number | string | boolean | undefined | Array<any>
   DivisionId: number;
@@ -12,6 +16,7 @@ export interface Division {
   NoCount: number;
   DoubleMajorityAyeCount?: number;
   DoubleMajorityNoCount?: number;
+  category: string
 }
 
 export interface DivisionResposne extends Division {

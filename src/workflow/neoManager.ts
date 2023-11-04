@@ -223,7 +223,7 @@ export const mostSimilarVotingRecordOutsideOfParty = async (nameDisplayAs: strin
     YIELD node1, node2, similarity 
     WITH gds.util.asNode(node1) AS mp1, gds.util.asNode(node2) AS mp2, similarity 
     WHERE (mp1.nameDisplayAs = "${nameDisplayAs}" OR mp2.nameDisplayAs = "${nameDisplayAs})"
-    AND mp2.partyName <> "${partyName}"
+    AND (mp1.partyName <> "${partyName}" OR mp2.partyName <> "${partyName}")    
     RETURN mp1.nameDisplayAs, mp2.nameDisplayAs, similarity
     ORDER BY similarity DESCENDING, mp1, mp2`;
 
@@ -250,7 +250,7 @@ export const setupNeo = async () => {
     driver = neo4j.driver(CONNECTION_STRING, neo4j.auth.basic(process.env.NEO4J_USER || '', process.env.NEO4J_PASSWORD || ''));
     const session = driver.session();
 
-    logger.debug(`NEO URL ${CONNECTION_STRING + process.env.NEO4J_USER + process.env.NEO4J_PASSWORD}`);
+    logger.debug(`NEO URL ${CONNECTION_STRING + process.env.NEO4J_USER + " " + process.env.NEO4J_PASSWORD}`);
 
     try {
         let result;        
