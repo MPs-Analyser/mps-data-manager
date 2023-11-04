@@ -28,7 +28,7 @@ const endAndPrintTiming = (timingStart: number, timingName: string) => {
  * @param b 
  * @returns 
  */
-const sortMps = (a:Mp, b:Mp) => {
+const sortMps = (a: Mp, b: Mp) => {
     if (a.nameDisplayAs < b.nameDisplayAs) {
         return -1;
     }
@@ -93,7 +93,7 @@ export const gatherStats = async () => {
     // Start timing
     timingStart = performance.now();
 
-    skip = MP_START_NUMBER;
+    skip = 0;
 
     neoCreateCount = 0;
 
@@ -137,19 +137,30 @@ export const gatherStats = async () => {
         let votedAye = [];
         // @ts-ignore
         let votedNo = [];
-        for (const mp of allMps) {
 
+        for (let i = MP_START_NUMBER; i < allMps.length; i++) {
+
+            const mp = allMps[i];
             const mpNumber = index + MP_START_NUMBER;
 
-            logger.debug(`get relationships for mp #${mpNumber} ${mp.nameDisplayAs}`);
+            logger.debug(`get relationships for mp [${mpNumber}] ${mp.nameDisplayAs}`);
 
             votesForMp = [];
             index += 1;
             let divisionsVotedCount: number = 25;
             let mpVoteCount: number = 0;
             while (divisionsVotedCount === 25) {
-                //for each mp get all the divisions they have voted on
-                const memeberVotings: Array<MemberVoting> = await getMemeberVoting(skip, 25, mp.id);
+
+                let memeberVotings: Array<MemberVoting>;
+                try {
+                    //for each mp get all the divisions they have voted on
+                    memeberVotings = await getMemeberVoting(skip, 25, mp.id);
+                } catch (error) {
+                    logger.info("CHECK ME OUT DOING A RETRY!!!!!!!!!")
+                    //this sometimes fails for network issues so want to retry just once for now
+                    memeberVotings = await getMemeberVoting(skip, 25, mp.id);
+                }
+                
 
                 skip += 25;
 
@@ -188,13 +199,13 @@ export const gatherStats = async () => {
             }
 
             if (USE_NEO) {
-                logger.debug(`creating ${votesForMp.length} Neo RELEATIONSHIPS for MP #${mpNumber} ${mp.nameDisplayAs}`);
+                logger.debug(`creating ${votesForMp.length} Neo RELEATIONSHIPS for MP [${mpNumber}] ${mp.nameDisplayAs}`);
                 for (let votedFor of votesForMp) {
                     await createVotedForDivision(votedFor);
                 }
             }
 
-            logger.debug(`created ${votesForMp.length} RELEATIONSHIPS for MP #${mpNumber} ${mp.nameDisplayAs}`);
+            logger.debug(`created ${votesForMp.length} RELEATIONSHIPS for MP [${mpNumber}] ${mp.nameDisplayAs}`);
             skip = 0;
             mpVoteCount = 0;
 

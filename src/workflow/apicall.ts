@@ -16,7 +16,7 @@ export const getMps = async (skip: number, take: number): Promise<Array<Mp>> => 
   try {
 
     const url: string = `https://members-api.parliament.uk/api/Members/Search?skip=${skip}&take=${take}&IsEligible=${true}&IsCurrentMember=${true}&House=${HOUSE_OF_COMMONS}`;
-    
+
     logger.trace(url);
 
     const res = await fetch(url);
@@ -40,7 +40,7 @@ export const getMps = async (skip: number, take: number): Promise<Array<Mp>> => 
 export const getMemebersDivisions = async (skip: number, take: number, memberId: number): Promise<Array<Division>> => {
 
   const url: string = `https://commonsvotes-api.parliament.uk/data/divisions.json/search?queryParameters.skip=${skip}&queryParameters.take=${take}&queryParameters.memberId=${memberId}`;
-  
+
   logger.trace(url);
 
   const res = await fetch(url);
@@ -75,20 +75,18 @@ export const getMemebersDivisions = async (skip: number, take: number, memberId:
 
 export const getMemeberVoting = async (skip: number, take: number, memberId: number): Promise<Array<MemberVoting>> => {
 
-  const url: string = `https://commonsvotes-api.parliament.uk/data/divisions.json/membervoting?queryParameters.memberId=${memberId}&queryParameters.skip=${skip}&queryParameters.take=${take}`;
-
+  const url: string = `https://commonsvotes-api.parliament.uk/data/divisions.json/membervoting?queryParameters.memberId=${memberId}&queryParameters.skip=${skip}&queryParameters.take=${take}`;  
   logger.trace(url);
-    
-  const res = await fetch(url);
 
-  let response: Array<MemberVoting>;
-  try {
+  try {    
+    const res = await fetch(url);
+    let response: Array<MemberVoting>;
     response = await res.json();
   } catch (error) {
-    logger.error('Failed to get votes for member ', error);
-    return [];    
+    logger.error(`Failed to get votes for member with id ${memberId}`, error);    
+    throw error;
   }
-  
+
   // @ts-ignore
   return response;
 
@@ -100,7 +98,7 @@ export const getAllDivisions = async (skip: number, take: number): Promise<Array
   logger.trace(url);
 
   const res = await fetch(url);
-  
+
   const divisions: Array<Division> = []
 
   if (res.status === 200) {
@@ -121,7 +119,7 @@ export const getAllDivisions = async (skip: number, take: number): Promise<Array
         NoCount: i.NoCount ?? 0,
         category: getCategory(i.Title)
       };
-      
+
       divisions.push(division)
 
     })
