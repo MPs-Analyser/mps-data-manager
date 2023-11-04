@@ -22,6 +22,22 @@ const endAndPrintTiming = (timingStart: number, timingName: string) => {
     logger.info(`<<TIMING>> ${timingName} in ${(timingEnd - timingStart) / 1000} seconds`);
 }
 
+/**
+ * Order mps by name
+ * @param a 
+ * @param b 
+ * @returns 
+ */
+const sortMps = (a:Mp, b:Mp) => {
+    if (a.nameDisplayAs < b.nameDisplayAs) {
+        return -1;
+    }
+    if (a.nameDisplayAs > b.nameDisplayAs) {
+        return 1;
+    }
+    return 0;
+}
+
 export const gatherStats = async () => {
 
     logger.info(`Creating ${Number(process.env.MP_LOOPS) * Number(process.env.MP_TAKE_PER_LOOP)} Mps`);
@@ -29,7 +45,7 @@ export const gatherStats = async () => {
     if (USE_NEO) {
         await setupNeo();
     }
-    
+
     const allMps: Array<Mp> = [];
     const allDivisions: Array<Division> = [];
     const allVotedForRelationships: Array<VotedFor> = [];
@@ -69,7 +85,7 @@ export const gatherStats = async () => {
         }
 
         logger.debug(`Created ${neoCreateCount} divisions in Neo4j`);
-    }    
+    }
 
     // END timing
     endAndPrintTiming(timingStart, 'created divisions');
@@ -92,6 +108,8 @@ export const gatherStats = async () => {
             break;
         }
     }
+
+    allMps.sort(sortMps);
     logger.debug(`Created ${allMps.length} MPs in memory`);
 
     if (CREATE_MPS && USE_NEO) {
@@ -179,7 +197,7 @@ export const gatherStats = async () => {
             logger.debug(`created ${votesForMp.length} RELEATIONSHIPS for MP #${mpNumber} ${mp.nameDisplayAs}`);
             skip = 0;
             mpVoteCount = 0;
-                        
+
         }
 
     }
@@ -191,7 +209,7 @@ export const gatherStats = async () => {
 
         logger.info('Doing DATA_SCIENCE similarity')
 
-        await setupDataScience();        
+        await setupDataScience();
 
         // Start timing
         timingStart = performance.now();

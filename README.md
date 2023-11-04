@@ -51,3 +51,8 @@ d1.Title AS division,
 d1.DivisionId AS divisionId,
 r1.votedAye AS m1VotedAye,
 r2.votedAye AS m2VotedAye
+
+
+//delete a node and all its relationships
+MATCH (n:Mp {nameDisplayAs: 'Ms Diane Abbott'})
+DETACH DELETE n
