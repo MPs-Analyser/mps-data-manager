@@ -328,7 +328,7 @@ export const createMpNode = async (mp: Mp) => {
 }
 
 export const createDivisionNode = async (division: Division) => {
-
+    
     const cypher: string = `CREATE (division:Division {
         DivisionId: ${division.DivisionId},
         Date: "${division.Date}",
@@ -339,11 +339,12 @@ export const createDivisionNode = async (division: Division) => {
         EVELCountry: "${division.EVELCountry}",
         Title: "${division.Title}",
         AyeCount: ${division.AyeCount},
-        NoCount: ${division.NoCount}
+        NoCount: ${division.NoCount},
+        Category: "${division.category}"
         })`;
 
     try {
-        const session = driver.session();
+        const session = driver.session();        
         const result = await session.run(cypher);
 
     } catch (error: any) {

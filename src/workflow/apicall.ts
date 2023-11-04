@@ -121,9 +121,7 @@ export const getAllDivisions = async (skip: number, take: number): Promise<Array
         NoCount: i.NoCount ?? 0,
         category: getCategory(i.Title)
       };
-
-      logger.info("check " + JSON.stringify(division))
-
+      
       divisions.push(division)
 
     })

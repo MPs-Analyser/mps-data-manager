@@ -8,14 +8,14 @@ import { setupMongo, insertSimilarity, insertDivisions, insertMps, insertVotingS
 
 const logger = require('../logger');
 
-const CREATE_MPS = true;
-const CREATE_DIVISIONS = true;
+const CREATE_MPS = false;
+const CREATE_DIVISIONS = false;
 const CREATE_MONGO_DIVISIONS = true;
 const CREATE_RELATIONSHIPS = true;
 const PERFORM_DATA_SCIENCE = true;
 const USE_NEO = true;
 const USE_MONGO = false;
-// const CREATE_VOTING_SUMMARY = true;
+const MP_START_NUMBER = 4;
 
 const endAndPrintTiming = (timingStart: number, timingName: string) => {
     // END timing
@@ -49,46 +49,42 @@ export const gatherStats = async () => {
     const totalTimeStart = performance.now();
     let timingStart = performance.now();
 
-    //create all the divisions 
-    if (CREATE_DIVISIONS) {
+    //create all the divisions     
+    skip = 0;
+    for (let i = 0; i < MAX_LOOPS; i++) {
+        //get all the divisions from the API (25 at a time) and store them in memory
+        skip += 25;
+        const divisions: Array<Division> = await getAllDivisions(skip, 25);
+        let fetchCount = divisions.length;
 
-        skip = 0;
-        for (let i = 0; i < MAX_LOOPS; i++) {
-            //get all the divisions from the API (25 at a time) and store them in memory
-            skip += 25;
-            const divisions: Array<Division> = await getAllDivisions(skip, 25);
-            let fetchCount = divisions.length;
+        allDivisions.push(...divisions)
 
-            allDivisions.push(...divisions)
-
-            if (fetchCount < 25) {
-                break;
-            }
+        if (fetchCount < 25) {
+            break;
         }
-
-        logger.debug(`Created ${allDivisions.length} divisions in memory`);
-
-        if (USE_NEO) {
-            neoCreateCount = 0;
-            for (let i of allDivisions) {
-                //loop through all mps in memory and store them in database
-                await createDivisionNode(i);
-                neoCreateCount = neoCreateCount + 1;
-            }
-
-            logger.debug(`Created ${neoCreateCount} divisions in Neo4j`);
-        }
-
-        if (CREATE_MONGO_DIVISIONS && USE_MONGO)  {
-            const mongoData = allDivisions.map(({ EVELType, EVELCountry, ...rest }) => {
-                return rest;
-            });
-            await insertDivisions(mongoData);
-            logger.debug(`Created divisions in Mongo`);
-        }
-
-
     }
+
+    logger.debug(`Created ${allDivisions.length} divisions in memory`);
+
+    if (USE_NEO && CREATE_DIVISIONS) {
+        neoCreateCount = 0;
+        for (let i of allDivisions) {
+            //loop through all mps in memory and store them in database
+            await createDivisionNode(i);
+            neoCreateCount = neoCreateCount + 1;
+        }
+
+        logger.debug(`Created ${neoCreateCount} divisions in Neo4j`);
+    }
+
+    if (CREATE_MONGO_DIVISIONS && USE_MONGO) {
+        const mongoData = allDivisions.map(({ EVELType, EVELCountry, ...rest }) => {
+            return rest;
+        });
+        await insertDivisions(mongoData);
+        logger.debug(`Created divisions in Mongo`);
+    }
+
 
     // END timing
     endAndPrintTiming(timingStart, 'created divisions');
@@ -96,31 +92,31 @@ export const gatherStats = async () => {
     // Start timing
     timingStart = performance.now();
 
-    skip = 0;
+    skip = MP_START_NUMBER;
+
     neoCreateCount = 0;
-    if (CREATE_MPS) {
 
-        for (let i = 0; i < Number(process.env.MP_LOOPS); i++) {
+    for (let i = 0; i < Number(process.env.MP_LOOPS); i++) {
 
-            const mps: Array<Mp> = await getMps(skip, Number(process.env.MP_TAKE_PER_LOOP));
+        const mps: Array<Mp> = await getMps(skip, Number(process.env.MP_TAKE_PER_LOOP));
 
-            skip += 25;
-            allMps.push(...mps);
+        skip += 25;
+        allMps.push(...mps);
 
-            if (mps.length < 20) {
-                break;
-            }
-        }
-        logger.debug(`Created ${allMps.length} MPs in memory`);
-
-        if (USE_NEO) {
-            for (let i of allMps) {
-                await createMpNode(i);
-                neoCreateCount = neoCreateCount + 1;
-            }
-            logger.debug(`Created ${neoCreateCount} MPs in Neo4j`);
+        if (mps.length < 20) {
+            break;
         }
     }
+    logger.debug(`Created ${allMps.length} MPs in memory`);
+
+    if (CREATE_MPS && USE_NEO) {
+        for (let i of allMps) {
+            await createMpNode(i);
+            neoCreateCount = neoCreateCount + 1;
+        }
+        logger.debug(`Created ${neoCreateCount} MPs in Neo4j`);
+    }
+
 
     // END timing
     endAndPrintTiming(timingStart, 'created MPs');
@@ -139,7 +135,10 @@ export const gatherStats = async () => {
         // @ts-ignore
         let votedNo = [];
         for (const mp of allMps) {
-            logger.debug(`get relationships for mp ${mp.nameDisplayAs}`);
+
+            const mpNumber = index + MP_START_NUMBER;
+
+            logger.debug(`get relationships for mp #${mpNumber} ${mp.nameDisplayAs}`);
 
             votesForMp = [];
             index += 1;
@@ -164,8 +163,8 @@ export const gatherStats = async () => {
                             mpId: mp.id,
                             divisionId: vote.PublishedDivision.DivisionId,
                             votedAye: vote.MemberVotedAye
-                        };                        
-                        
+                        };
+
                         votesForMp.push(votes);
 
                         if (vote.MemberVotedAye) {
@@ -186,13 +185,13 @@ export const gatherStats = async () => {
             }
 
             if (USE_NEO) {
-                logger.debug(`creating ${votesForMp.length} Neo RELEATIONSHIPS for MP #${index} ${mp.nameDisplayAs}`);
+                logger.debug(`creating ${votesForMp.length} Neo RELEATIONSHIPS for MP #${mpNumber} ${mp.nameDisplayAs}`);
                 for (let votedFor of votesForMp) {
                     await createVotedForDivision(votedFor);
                 }
             }
 
-            logger.debug(`created ${votesForMp.length} RELEATIONSHIPS for MP #${index} ${mp.nameDisplayAs}`);
+            logger.debug(`created ${votesForMp.length} RELEATIONSHIPS for MP #${mpNumber} ${mp.nameDisplayAs}`);
             skip = 0;
             mpVoteCount = 0;
 
@@ -255,7 +254,7 @@ export const gatherStats = async () => {
                     })
 
                 })
-                
+
                 mongoData.push(mongoRecord);
 
                 if (USE_MONGO && count === BATCH_SIZE) {
