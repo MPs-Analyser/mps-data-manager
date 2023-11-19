@@ -277,8 +277,8 @@ export const setupDataScience = async () => {
     const session = driver.session();
 
     try {
-        await runCypher(`CALL gds.graph.drop('g1',false) YIELD graphName`, session);
-        await runCypher(`CALL gds.graph.project('g1', ['Mp', 'Division'], ['VOTED_FOR'],  { relationshipProperties: ['votedAyeNumeric'] })`, session);
+        await runCypher(`CALL gds.graph.drop('similarityGraph',false) YIELD graphName`, session);        
+        await runCypher(`CALL gds.graph.project('similarityGraph', {Mp: {}, Division: { properties: 'DateNumeric' }}, ['VOTED_FOR'],  { relationshipProperties: ['votedAyeNumeric'] })`, session);
     } catch (error) {
         //contraint already exists so proceed
     }
@@ -311,12 +311,12 @@ export const createMpNode = async (mp: Mp) => {
         partyGovernmentType: "${mp.latestParty.governmentType}",
         partyIsIndependentParty: "${mp.latestParty.isIndependentParty}",
         house: ${mp.latestHouseMembership.house},
-        membershipFrom: "${mp.latestHouseMembership.membershipFrom}",        
-        membershipStartDate: "${mp.latestHouseMembership.membershipStartDate}"
+        membershipFrom: "${mp.latestHouseMembership.membershipFrom}",
+        membershipStartDate: datetime("${mp.latestHouseMembership.membershipStartDate}")
       });`
 
     try {
-        const session = driver.session();
+        const session = driver.session();                
         const result = await session.run(cypher);
         // logger.debug('created ', result);
 
@@ -330,10 +330,13 @@ export const createMpNode = async (mp: Mp) => {
 
 export const createDivisionNode = async (division: Division) => {
     
+    const dateNumeric = new Date(division.Date);
+        
     const cypher: string = `CREATE (division:Division {
         DivisionId: ${division.DivisionId},
-        Date: "${division.Date}",
-        PublicationUpdated: "${division.PublicationUpdated}",
+        Date: datetime("${division.Date}"),
+        DateNumeric: ${dateNumeric.getTime()},
+        PublicationUpdated: datetime("${division.PublicationUpdated}"),
         Number: ${division.Number},
         IsDeferred: ${division.IsDeferred},
         EVELType: "${division.EVELType}",
@@ -344,10 +347,9 @@ export const createDivisionNode = async (division: Division) => {
         Category: "${division.category}"
         })`;
 
-    try {
+    try {                
         const session = driver.session();        
         const result = await session.run(cypher);
-
     } catch (error: any) {
         if (error.code !== "Neo.ClientError.Schema.ConstraintValidationFailed") {
             logger.error(`Error adding to neo ${error}`);

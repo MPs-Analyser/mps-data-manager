@@ -160,7 +160,7 @@ export const gatherStats = async () => {
                     //this sometimes fails for network issues so want to retry just once for now
                     memeberVotings = await getMemeberVoting(skip, 25, mp.id);
                 }
-                
+
 
                 skip += 25;
 
@@ -217,42 +217,7 @@ export const gatherStats = async () => {
     endAndPrintTiming(timingStart, 'creating relationships');
 
     if (PERFORM_DATA_SCIENCE && USE_NEO) {
-
-        logger.info('Doing DATA_SCIENCE similarity')
-
         await setupDataScience();
-
-        // Start timing
-        timingStart = performance.now();
-
-        let count = 0;
-        for (const mp of allMps) {
-
-            logger.debug('Get Similarity for mp ', mp.nameDisplayAs);
-            const result = await mostSimilarVotingRecord(mp.nameDisplayAs);
-
-            if (result) {
-                const mongoRecord = {
-                    _id: mp.id,
-                    name: mp.nameDisplayAs,
-                    similarity: []
-                }
-
-                // @ts-ignore
-                result.records.forEach(async record => {
-                    // @ts-ignore
-                    mongoRecord.similarity.push({
-                        name: record._fields[1],
-                        score: record._fields[2]
-                    })
-                })
-            }
-
-            count = count + 1;
-        }
-
-        // END timing
-        endAndPrintTiming(timingStart, 'creating similarities');
     }
 
     if (USE_NEO) {

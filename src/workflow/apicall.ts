@@ -77,10 +77,9 @@ export const getMemeberVoting = async (skip: number, take: number, memberId: num
 
   const url: string = `https://commonsvotes-api.parliament.uk/data/divisions.json/membervoting?queryParameters.memberId=${memberId}&queryParameters.skip=${skip}&queryParameters.take=${take}`;  
   logger.trace(url);
-
+  let response: Array<MemberVoting>;
   try {    
-    const res = await fetch(url);
-    let response: Array<MemberVoting>;
+    const res = await fetch(url);    
     response = await res.json();
   } catch (error) {
     logger.error(`Failed to get votes for member with id ${memberId}`, error);    
