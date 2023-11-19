@@ -1,4 +1,4 @@
-import { log } from "console";
+
 import { getMps, getDivision, getMemebersDivisions, getAllDivisions, getMemeberVoting } from "./apicall"
 import { createMpNode, createDivisionNode, setupNeo, createVotedForDivision, cleanUp, setupDataScience, mostSimilarVotingRecord, votedNoCount, votedAyeCount, totalVotes } from "./neoManager";
 import { Mp } from "../models/mps";
@@ -62,9 +62,9 @@ export const gatherStats = async () => {
     //create all the divisions     
     skip = 0;
     for (let i = 0; i < MAX_LOOPS; i++) {
-        //get all the divisions from the API (25 at a time) and store them in memory
-        skip += 25;
+        //get all the divisions from the API (25 at a time) and store them in memory        
         const divisions: Array<Division> = await getAllDivisions(skip, 25);
+        skip += 25;
         let fetchCount = divisions.length;
 
         allDivisions.push(...divisions)
