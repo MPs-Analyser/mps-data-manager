@@ -398,8 +398,7 @@ export const createParyRelationships = async () => {
 
     const session = driver.session();
     try {
-        const result = await runCypher(cypher, session);            
-        logger.info(result);
+        const result = await runCypher(cypher, session);                    
     } catch (error: any) {
         if (error.code !== "Neo.ClientError.Schema.ConstraintValidationFailed") {
             logger.error(`Error adding to neo ${error}`);
