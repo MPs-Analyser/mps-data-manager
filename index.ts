@@ -4,7 +4,8 @@ import cors from 'cors';
 
 import statusRouter from './src/routes/statusRouter';
 
-import { gatherStats } from './src/workflow/gatherStats';
+import { gatherStats, createParties } from './src/workflow/gatherStats';
+import { setupNeo } from './src/workflow/neoManager';
 
 dotenv.config()
 
@@ -16,5 +17,5 @@ app.use("/status", statusRouter);
 
 app.listen(port, () => {  
   console.log(`⚡️[server]: Server is running at http://localhost:${port}`);
-  gatherStats();
+  gatherStats();  
 });

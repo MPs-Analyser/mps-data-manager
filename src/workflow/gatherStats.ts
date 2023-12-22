@@ -1,6 +1,6 @@
 
 import { getMps, getDivision, getMemebersDivisions, getAllDivisions, getMemeberVoting } from "./apicall"
-import { createMpNode, createDivisionNode, setupNeo, createVotedForDivision, cleanUp, setupDataScience, mostSimilarVotingRecord, votedNoCount, votedAyeCount, totalVotes } from "./neoManager";
+import { createMpNode, createDivisionNode, setupNeo, createVotedForDivision, cleanUp, setupDataScience, getPartyMpCounts, createPartyNode, createParyRelationships } from "./neoManager";
 import { Mp } from "../models/mps";
 import { Division, MemberVoting } from "../models/divisions";
 import { VotedFor } from "../models/relationships";
@@ -38,17 +38,42 @@ const sortMps = (a: Mp, b: Mp) => {
     return 0;
 }
 
+export const createParties = async () => {
+
+    logger.info("Creating pary nodes")    
+
+    const result = await getPartyMpCounts(); 
+
+    const allParties = [];
+    for await (const record of  result.records) {
+    
+        const party = { 
+            name: record._fields[0],
+            mpsCount: record._fields[1].low,
+        }
+
+        allParties.push(party);
+     
+    }
+
+    for await (const party of allParties) {
+        await createPartyNode(party);   
+    }
+
+    logger.info(`Created ${allParties.length} pary nodes`);
+
+    await createParyRelationships();
+
+}
+
 export const gatherStats = async () => {
 
     logger.info(`Creating ${Number(process.env.MP_LOOPS) * Number(process.env.MP_TAKE_PER_LOOP)} Mps`);
 
-    if (USE_NEO) {
-        await setupNeo();
-    }
+    await setupNeo();
 
     const allMps: Array<Mp> = [];
-    const allDivisions: Array<Division> = [];
-    const allVotedForRelationships: Array<VotedFor> = [];
+    const allDivisions: Array<Division> = [];    
 
     const MAX_LOOPS = 1000;
     let skip = 0;
@@ -212,6 +237,8 @@ export const gatherStats = async () => {
         }
 
     }
+
+    createParties();
 
     // END timing
     endAndPrintTiming(timingStart, 'creating relationships');

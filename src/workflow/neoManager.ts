@@ -253,7 +253,7 @@ export const setupNeo = async () => {
     logger.debug(`NEO URL ${CONNECTION_STRING + process.env.NEO4J_USER + " " + process.env.NEO4J_PASSWORD}`);
 
     try {
-        let result;        
+        let result;
         // result = await runCypher(`CREATE CONSTRAINT relUnique FOR ()-[r:VOTED_FOR]-() REQUIRE (r.votedAye) IS UNIQUE`, session);
         result = await runCypher(`CREATE CONSTRAINT FOR (mp:Mp) REQUIRE mp.id IS UNIQUE`, session);
         result = await runCypher(`CREATE CONSTRAINT FOR (mp:Mp) REQUIRE mp.id IS UNIQUE`, session);
@@ -277,7 +277,7 @@ export const setupDataScience = async () => {
     const session = driver.session();
 
     try {
-        await runCypher(`CALL gds.graph.drop('similarityGraph',false) YIELD graphName`, session);        
+        await runCypher(`CALL gds.graph.drop('similarityGraph',false) YIELD graphName`, session);
         await runCypher(`CALL gds.graph.project('similarityGraph', {Mp: {}, Division: { properties: 'DateNumeric' }}, ['VOTED_FOR'],  { relationshipProperties: ['votedAyeNumeric'] })`, session);
     } catch (error) {
         //contraint already exists so proceed
@@ -291,7 +291,44 @@ export const cleanUp = () => {
     driver.close();
 }
 
+export const getPartyMpCounts = async () => {
+
+    const cypher: string = `MATCH (n:Mp) RETURN n.partyName, COUNT (n.partyName) as mpsCount`;
+
+    const session = driver.session();
+    try {
+        await runCypher(cypher, session);
+        const result = await session.run(cypher);
+        return result;
+    } catch (error: any) {
+        if (error.code !== "Neo.ClientError.Schema.ConstraintValidationFailed") {
+            logger.error(`Error querying neo ${error}`);
+        }
+    }
+}
+
+
+export const createPartyNode = async (party: any) => {
+
+    const cypher: string = `CREATE (party:Party {
+        partyName: "${party.name}",
+        mpsCount: ${party.mpsCount}
+      });`
+
+    const session = driver.session();
+    try {
+        await runCypher(cypher, session);        
+    } catch (error: any) {
+        if (error.code !== "Neo.ClientError.Schema.ConstraintValidationFailed") {
+            logger.error(`Error adding to neo ${error}`);
+        }
+    }
+
+}
+
 export const createMpNode = async (mp: Mp) => {
+
+    const partyName = mp.latestParty.name.includes("abour") ? "Labour" : mp.latestParty.name;
 
     const cypher: string =
         `CREATE (mp:Mp {
@@ -300,7 +337,7 @@ export const createMpNode = async (mp: Mp) => {
         nameDisplayAs: "${mp.nameDisplayAs}",
         nameFullTitle: "${mp.nameFullTitle}",                
         partyId: "${mp.latestParty.id}",
-        partyName: "${mp.latestParty.name}",
+        partyName: "${partyName}",
         gender: "${mp.gender}",        
         partyBackgroundColour: "${mp.latestParty.backgroundColour}",
         partyForegroundColour: "${mp.latestParty.foregroundColour}",
@@ -313,7 +350,7 @@ export const createMpNode = async (mp: Mp) => {
       });`
 
     try {
-        const session = driver.session();                
+        const session = driver.session();
         const result = await session.run(cypher);
         // logger.debug('created ', result);
 
@@ -326,9 +363,9 @@ export const createMpNode = async (mp: Mp) => {
 }
 
 export const createDivisionNode = async (division: Division) => {
-    
+
     const dateNumeric = new Date(division.Date);
-        
+
     const cypher: string = `CREATE (division:Division {
         DivisionId: ${division.DivisionId},
         Date: datetime("${division.Date}"),
@@ -342,8 +379,8 @@ export const createDivisionNode = async (division: Division) => {
         Category: "${division.category}"
         })`;
 
-    try {                
-        const session = driver.session();        
+    try {
+        const session = driver.session();
         const result = await session.run(cypher);
     } catch (error: any) {
         if (error.code !== "Neo.ClientError.Schema.ConstraintValidationFailed") {
@@ -351,6 +388,23 @@ export const createDivisionNode = async (division: Division) => {
         }
     }
 
+}
+
+export const createParyRelationships = async () => {
+    
+    logger.info(`Createding pary relationships`);
+
+    const cypher = `MATCH (party:Party) MATCH (mp:Mp {partyName: party.partyName}) CREATE (mp)-[:MEMBER_OF]->(party)`;
+
+    const session = driver.session();
+    try {
+        const result = await runCypher(cypher, session);            
+        logger.info(result);
+    } catch (error: any) {
+        if (error.code !== "Neo.ClientError.Schema.ConstraintValidationFailed") {
+            logger.error(`Error adding to neo ${error}`);
+        }
+    }
 }
 
 export const createVotedForDivision = async (votedFor: VotedFor) => {
