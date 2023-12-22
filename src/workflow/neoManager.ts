@@ -362,6 +362,52 @@ export const createMpNode = async (mp: Mp) => {
 
 }
 
+export const createDonarNode = async (donar: any) => {
+    
+    const cypher: string = `CREATE (donar:Donar {
+        donar: "${donar.DonorName}",
+        ecRef: "${donar.ECRef}",
+        partyName: "${donar.Party}",        
+        amount: "${donar.Value}",
+        acceptedDate: datetime("${donar.AcceptedDate}"),
+        receivedDate: datetime("${donar.ReceivedDate}"),                
+        accountingUnitName: "${donar.AccountingUnitName}",
+        donorStatus: "${donar.DonorStatus}",
+        postcode: "${donar.Postcode}",
+        donationType: "${donar.DonationType}",
+        postcode: "${donar.Postcode}",
+        natureOfDonation: "${donar.NatureOfDonation}",
+        postcode: "${donar.Postcode}"             
+        })`;
+
+    try {
+        const session = driver.session();
+        const result = await session.run(cypher);
+    } catch (error: any) {
+        if (error.code !== "Neo.ClientError.Schema.ConstraintValidationFailed") {
+            logger.error(`Error adding to neo ${error}`);
+        }
+    }
+}
+
+export const createDonarRelationships = async () => {
+    
+    logger.info(`Createding donar relationships`);
+
+    const cypher = `MATCH (party:Party) MATCH (donar:Donar {partyName: party.partyName}) CREATE (donar)-[:DONATED_TO]->(party)`;
+
+    const session = driver.session();
+    try {
+        const result = await runCypher(cypher, session);                    
+    } catch (error: any) {
+        if (error.code !== "Neo.ClientError.Schema.ConstraintValidationFailed") {
+            logger.error(`Error adding to neo ${error}`);
+        }
+    }
+
+    logger.info(`Donar relationships created`);
+}
+
 export const createDivisionNode = async (division: Division) => {
 
     const dateNumeric = new Date(division.Date);

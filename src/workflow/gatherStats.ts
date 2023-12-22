@@ -1,9 +1,10 @@
 
-import { getMps, getDivision, getMemebersDivisions, getAllDivisions, getMemeberVoting } from "./apicall"
+import { getMps, getAllDivisions, getMemeberVoting } from "./apicall"
 import { createMpNode, createDivisionNode, setupNeo, createVotedForDivision, cleanUp, setupDataScience, getPartyMpCounts, createPartyNode, createParyRelationships } from "./neoManager";
 import { Mp } from "../models/mps";
 import { Division, MemberVoting } from "../models/divisions";
 import { VotedFor } from "../models/relationships";
+import { getDonations } from "./donationsManager";
 
 const logger = require('../logger');
 
@@ -239,6 +240,8 @@ export const gatherStats = async () => {
     }
 
     createParties();
+
+    getDonations();
 
     // END timing
     endAndPrintTiming(timingStart, 'creating relationships');
