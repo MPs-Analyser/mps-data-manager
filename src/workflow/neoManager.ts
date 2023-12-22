@@ -363,7 +363,7 @@ export const createMpNode = async (mp: Mp) => {
 }
 
 export const createDonarNode = async (donar: any) => {
-    
+
     const cypher: string = `CREATE (donar:Donar {
         donar: "${donar.DonorName}",
         ecRef: "${donar.ECRef}",
@@ -386,6 +386,8 @@ export const createDonarNode = async (donar: any) => {
     } catch (error: any) {
         if (error.code !== "Neo.ClientError.Schema.ConstraintValidationFailed") {
             logger.error(`Error adding to neo ${error}`);
+            logger.error(cypher);
+
         }
     }
 }
