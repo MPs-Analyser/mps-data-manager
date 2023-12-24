@@ -368,7 +368,7 @@ export const createDonarNode = async (donar: any) => {
         donar: "${donar.DonorName}",
         ecRef: "${donar.ECRef}",
         partyName: "${donar.Party}",        
-        amount: "${donar.Value}",
+        amount: ${donar.Value},
         acceptedDate: datetime("${donar.AcceptedDate}"),
         receivedDate: datetime("${donar.ReceivedDate}"),                
         accountingUnitName: "${donar.AccountingUnitName}",
