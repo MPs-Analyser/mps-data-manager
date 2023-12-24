@@ -13,9 +13,11 @@ const CREATE_MPS = true;
 const CREATE_DIVISIONS = true;
 const MP_START_NUMBER = 0;
 
+const USE_NEO = true;
 const CREATE_RELATIONSHIPS = true;
 const PERFORM_DATA_SCIENCE = true;
-const USE_NEO = true;
+const CREATE_DONATIONS = true;
+const CREATE_PARTIES = true;
 
 const endAndPrintTiming = (timingStart: number, timingName: string) => {
     // END timing
@@ -239,9 +241,15 @@ export const gatherStats = async () => {
 
     }
 
-    createParties();
+    if (CREATE_PARTIES) {
+        createParties();
+    }
+    
 
-    getDonations();
+    if (CREATE_DONATIONS) {
+        getDonations();
+    }
+    
 
     // END timing
     endAndPrintTiming(timingStart, 'creating relationships');

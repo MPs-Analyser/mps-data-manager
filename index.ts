@@ -5,5 +5,5 @@ import { gatherStats } from './src/workflow/gatherStats';
 import { getDonations } from "./src/workflow/donationsManager";
 
 dotenv.config();
-// gatherStats();  
-getDonations();
+gatherStats();  
+// getDonations();
