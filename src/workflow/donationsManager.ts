@@ -1,7 +1,7 @@
 
 const logger = require('../logger');
 
-import { createDonarNode, createDonarRelationships, setupNeo } from "../workflow/neoManager";
+import { createDonarNode, createDonarRelationships, createDonar, setupNeo } from "../workflow/neoManager";
 
 const ROWS_TO_TAKE = 50;
 
@@ -19,11 +19,12 @@ const extractDate = (dateString:string|undefined, otherDate:string|undefined, do
             dateString = period;
         } else {
             dateString = otherDate;
-        }
-        
+        }    
     }
 
-
+    if (!dateString.includes("Date")) {
+        return dateString;
+    } 
 
     try {
 
@@ -85,8 +86,6 @@ export const getDonations = async () => {
     const period = { from, to };
     const currentYear = new Date().getFullYear();
 
-    await setupNeo();
-
     while (from <= currentYear) {
 
         console.log(`Processing year ${from}`);
@@ -119,8 +118,9 @@ export const getDonations = async () => {
                         donar.ReceivedDate = extractDate(donar.ReceivedDate, donar.AcceptedDate, donar, `${from}-11-19T00:00:00.000Z`) || `${from}-11-19T00:00:00.000Z`;
                     }
                                                             
-                    donar.Party = extractParty(donar.RegulatedEntityName);
-                    await createDonarNode(donar);
+                    donar.Party = extractParty(donar.RegulatedEntityName);                    
+                    // await createDonarNode(donar);
+                    await createDonar(donar);
                 }
 
                 currentlyProcessed = currentlyProcessed + donationsResult.Result.length;
@@ -147,6 +147,6 @@ export const getDonations = async () => {
 
     }
 
-    createDonarRelationships();
+    // createDonarRelationships();
 
 }
